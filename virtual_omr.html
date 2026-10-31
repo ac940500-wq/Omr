@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Custom Mock Test</title>
+
+<!-- jsPDF -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:Arial,sans-serif;
+}
+
+body{
+    background:#f3f4f6;
+    padding:20px;
+}
+
+h1{
+    text-align:center;
+    margin-bottom:20px;
+}
+
+.setup-box{
+    background:white;
+    padding:20px;
+    border-radius:12px;
+    max-width:500px;
+    margin:0 auto 30px auto;
+    box-shadow:0 2px 10px rgba(0,0,0,0.1);
+}
+
+.setup-box label{
+    display:block;
+    margin-top:15px;
+    margin-bottom:5px;
+    font-weight:bold;
+}
+
+.setup-box input{
+    width:100%;
+    padding:12px;
+    border-radius:8px;
+    border:1px solid #ccc;
+}
+
+.start-btn{
+    width:100%;
+    margin-top:20px;
+    padding:14px;
+    border:none;
+    border-radius:10px;
+    background:#2563eb;
+    color:white;
+    font-size:18px;
+    cursor:pointer;
+}
+
+.start-btn:hover{
+    background:#1d4ed8;
+}
+
+#timer{
+    position:sticky;
+    top:10px;
+    width:220px;
+    margin:0 auto 25px auto;
+    background:#111827;
+    color:white;
+    padding:15px;
+    text-align:center;
+    border-radius:12px;
+    font-size:28px;
+    font-weight:bold;
+    z-index:1000;
+    display:none;
+}
+
+.questions-container{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(250px,1fr));
+    gap:15px;
+}
+
+.question-box{
+    background:white;
+    padding:15px;
+    border-radius:12px;
+    box-shadow:0 2px 8px rgba(0,0,0,0.1);
+}
+
+.question-title{
+    font-size:18px;
+    font-weight:bold;
+    margin-bottom:12px;
+}
+
+.options{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:10px;
+}
+
+.option-label{
+    background:#e0e7ff;
+    padding:10px;
+    border-radius:8px;
+    text-align:center;
+    cursor:pointer;
+}
+
+.option-label:hover{
+    background:#c7d2fe;
+}
+
+.submit-btn{
+    display:block;
+    margin:30px auto;
+    padding:15px 35px;
+    font-size:18px;
+    border:none;
+    border-radius:12px;
+    background:#2563eb;
+    color:white;
+    cursor:pointer;
+}
+
+.submit-btn:hover{
+    background:#1d4ed8;
+}
+
+.pdf-btn{
+    background:#16a34a;
+}
+
+.pdf-btn:hover{
+    background:#15803d;
+}
+
+.answer-section{
+    display:none;
+    margin-top:40px;
+}
+
+.answer-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:15px;
+    margin-top:20px;
+}
+
+.answer-box{
+    background:white;
+    padding:12px;
+    border-radius:10px;
+    box-shadow:0 2px 6px rgba(0,0,0,0.1);
+}
+
+select{
+    width:100%;
+    padding:10px;
+    margin-top:8px;
+    border-radius:8px;
+}
+
+#result{
+    margin-top:40px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Custom Mock Test</h1>
+
+<div class="setup-box">
+
+    <label>Test Name</label>
+    <input type="text" id="testName" placeholder="Enter Test Name">
+
+    <label>Number of Questions</label>
+    <input type="number" id="questionCount" value="180" min="1">
+
+    <label>Timer Duration (Minutes)</label>
+    <input type="number" id="timerMinutes" value="180" min="1">
+
+    <button class="start-btn" onclick="startTest()">
+        Start Test
+    </button>
+
+</div>
+
+<div id="timer">00:00</div>
+
+<div class="questions-container" id="questionsContainer"></div>
+
+<button
+    class="submit-btn"
+    id="finishBtn"
+    onclick="finishTest()"
+    style="display:none;"
+>
+    Finish Test
+</button>
+
+<div class="answer-section" id="answerSection">
+
+    <h1>Enter Correct Answers</h1>
+
+    <div class="answer-grid" id="answerGrid"></div>
+
+    <button class="submit-btn" onclick="evaluateTest()">
+        Evaluate Marks
+    </button>
+
+</div>
+
+<div id="result"></div>
+
+<script>
+
+let totalQuestions = 0;
+
+let totalTime = 0;
+
+let timer;
+
+let pdfData = [];
+
+let currentTestName = "Mock_Test";
+
+const questionsContainer = document.getElementById("questionsContainer");
+
+const answerGrid = document.getElementById("answerGrid");
+
+
+
+// START TEST
+
+function startTest(){
+
+    currentTestName =
+        document.getElementById("testName").value || "Mock_Test";
+
+    totalQuestions =
+        parseInt(document.getElementById("questionCount").value);
+
+    const minutes =
+        parseInt(document.getElementById("timerMinutes").value);
+
+    totalTime = minutes * 60;
+
+    questionsContainer.innerHTML = "";
+
+    answerGrid.innerHTML = "";
+
+    document.getElementById("result").innerHTML = "";
+
+    document.getElementById("answerSection").style.display = "none";
+
+    document.getElementById("timer").style.display = "block";
+
+    document.getElementById("finishBtn").style.display = "block";
+
+
+
+    // GENERATE QUESTIONS
+
+    for(let i=1;i<=totalQuestions;i++){
+
+        const qBox = document.createElement("div");
+
+        qBox.className = "question-box";
+
+        let html = `
+            <div class="question-title">
+                Question ${i}
+            </div>
+
+            <div class="options">
+        `;
+
+        for(let op=1; op<=4; op++){
+
+            html += `
+                <label class="option-label">
+
+                    <input
+                        type="radio"
+                        name="q${i}"
+                        value="${op}"
+                    >
+
+                    ${op}
+
+                </label>
+            `;
+        }
+
+        html += `</div>`;
+
+        qBox.innerHTML = html;
+
+        questionsContainer.appendChild(qBox);
+    }
+
+
+
+    // START TIMER
+
+    clearInterval(timer);
+
+    updateTimer();
+
+    timer = setInterval(() => {
+
+        totalTime--;
+
+        updateTimer();
+
+        if(totalTime <= 0){
+
+            clearInterval(timer);
+
+            finishTest();
+        }
+
+    },1000);
+
+
+
+    // GO TO TOP
+
+    window.scrollTo({
+        top:0,
+        behavior:"smooth"
+    });
+}
+
+
+
+
+// UPDATE TIMER
+
+function updateTimer(){
+
+    let minutes = Math.floor(totalTime / 60);
+
+    let seconds = totalTime % 60;
+
+    document.getElementById("timer").innerText =
+
+        `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+}
+
+
+
+
+// FINISH TEST
+
+function finishTest(){
+
+    clearInterval(timer);
+
+    document.getElementById("answerSection").style.display = "block";
+
+    if(answerGrid.innerHTML !== ""){
+
+        document.getElementById("answerSection").scrollIntoView({
+            behavior:"smooth",
+            block:"start"
+        });
+
+        return;
+    }
+
+
+
+    for(let i=1;i<=totalQuestions;i++){
+
+        const box = document.createElement("div");
+
+        box.className = "answer-box";
+
+        box.innerHTML = `
+
+            <div>
+                <b>Correct Answer Q${i}</b>
+            </div>
+
+            <select id="correct${i}">
+
+                <option value="">Select</option>
+
+                <option value="1">1</option>
+
+                <option value="2">2</option>
+
+                <option value="3">3</option>
+
+                <option value="4">4</option>
+
+            </select>
+
+        `;
+
+        answerGrid.appendChild(box);
+    }
+
+
+
+    document.getElementById("answerSection").scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+    });
+}
+
+
+
+
+// EVALUATE TEST
+
+function evaluateTest(){
+
+    let correct = 0;
+
+    let incorrect = 0;
+
+    let unanswered = 0;
+
+    let detailedResult = "";
+
+    pdfData = [];
+
+
+
+    for(let i=1;i<=totalQuestions;i++){
+
+        const selected =
+
+            document.querySelector(`input[name="q${i}"]:checked`);
+
+        const correctAns =
+
+            document.getElementById(`correct${i}`).value;
+
+
+
+        if(!selected){
+
+            unanswered++;
+
+            detailedResult += `
+
+                <div style="
+                    background:#f3f4f6;
+                    padding:10px;
+                    border-radius:8px;
+                    margin-bottom:8px;
+                ">
+
+                    Q${i}: ⚪ Unanswered |
+
+                    Correct Answer:
+                    <b>${correctAns || "Not Given"}</b>
+
+                </div>
+
+            `;
+
+            pdfData.push(
+                `Q${i}: Unanswered | Correct Answer: ${correctAns}`
+            );
+
+            continue;
+        }
+
+
+
+        if(selected.value === correctAns){
+
+            correct++;
+
+            detailedResult += `
+
+                <div style="
+                    background:#dcfce7;
+                    padding:10px;
+                    border-radius:8px;
+                    margin-bottom:8px;
+                ">
+
+                    Q${i}: ✅ Correct |
+
+                    Your Answer:
+                    <b>${selected.value}</b>
+
+                </div>
+
+            `;
+
+            pdfData.push(
+                `Q${i}: Correct | Your Answer: ${selected.value}`
+            );
+        }
+
+        else{
+
+            incorrect++;
+
+            detailedResult += `
+
+                <div style="
+                    background:#fee2e2;
+                    padding:10px;
+                    border-radius:8px;
+                    margin-bottom:8px;
+                ">
+
+                    Q${i}: ❌ Incorrect |
+
+                    Your Answer:
+                    <b>${selected.value}</b>
+
+                    |
+
+                    Correct Answer:
+                    <b>${correctAns}</b>
+
+                </div>
+
+            `;
+
+            pdfData.push(
+                `Q${i}: Incorrect | Your Answer: ${selected.value} | Correct Answer: ${correctAns}`
+            );
+        }
+    }
+
+
+
+    const marks = (correct * 4) - incorrect;
+
+
+
+    document.getElementById("result").innerHTML = `
+
+        <div style="
+            background:white;
+            padding:20px;
+            border-radius:12px;
+            box-shadow:0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom:20px;
+        ">
+
+            <h2>${currentTestName}</h2>
+
+            <br>
+
+            <div>
+                ✅ Correct:
+                <b>${correct}</b>
+            </div>
+
+            <div>
+                ❌ Incorrect:
+                <b>${incorrect}</b>
+            </div>
+
+            <div>
+                ⚪ Unanswered:
+                <b>${unanswered}</b>
+            </div>
+
+            <br>
+
+            <div style="
+                font-size:30px;
+                color:#2563eb;
+                font-weight:bold;
+            ">
+                Total Marks: ${marks}
+            </div>
+
+        </div>
+
+
+
+        <button
+            class="submit-btn pdf-btn"
+
+            onclick="downloadPDF(
+                ${correct},
+                ${incorrect},
+                ${unanswered},
+                ${marks}
+            )"
+        >
+
+            Export PDF
+
+        </button>
+
+
+
+        <h2 style="
+            margin-top:25px;
+            margin-bottom:15px;
+        ">
+
+            Question Wise Analysis
+
+        </h2>
+
+        ${detailedResult}
+
+    `;
+
+
+
+    document.getElementById("result").scrollIntoView({
+        behavior:"smooth",
+        block:"start"
+    });
+}
+
+
+
+
+// DOWNLOAD PDF
+
+function downloadPDF(correct, incorrect, unanswered, marks){
+
+    const { jsPDF } = window.jspdf;
+
+    const doc = new jsPDF();
+
+    let y = 20;
+
+
+
+    doc.setFontSize(22);
+
+    doc.text(currentTestName, 20, y);
+
+    y += 15;
+
+
+
+    doc.setFontSize(14);
+
+    doc.text(`Correct: ${correct}`, 20, y);
+
+    y += 10;
+
+    doc.text(`Incorrect: ${incorrect}`, 20, y);
+
+    y += 10;
+
+    doc.text(`Unanswered: ${unanswered}`, 20, y);
+
+    y += 10;
+
+    doc.text(`Total Marks: ${marks}`, 20, y);
+
+    y += 20;
+
+
+
+    doc.setFontSize(16);
+
+    doc.text("Question Wise Analysis", 20, y);
+
+    y += 10;
+
+
+
+    doc.setFontSize(10);
+
+    for(let i=0; i<pdfData.length; i++){
+
+        if(y > 280){
+
+            doc.addPage();
+
+            y = 20;
+        }
+
+        doc.text(pdfData[i], 15, y);
+
+        y += 7;
+    }
+
+
+
+    let fileName = currentTestName
+        .replace(/[^a-z0-9]/gi, "_")
+        .toLowerCase();
+
+
+
+    doc.save(`${fileName}.pdf`);
+}
+
+</script>
+
+</body>
+</html>
